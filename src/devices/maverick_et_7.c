@@ -18,6 +18,7 @@ static int maverick_et_7_callback(bitbuffer_t *bitbuffer) {
 	char time_str[LOCAL_TIME_BUFLEN];
 	local_time_str(0, time_str);
 	int i, init_code, checksum, flag;
+	int16_t raw_temp1, raw_temp2;
 	float temp1, temp2;
 
 
@@ -32,16 +33,23 @@ static int maverick_et_7_callback(bitbuffer_t *bitbuffer) {
 	}
 
 	init_code = bb[1][0];
-	temp1 = (float)((signed short)((bb[1][1] << 4) + ((bb[1][2] & 0xf0) >> 4))) / 10.0;
-	temp2 = (float)((signed short)(((bb[1][2] & 0x0f) << 8) + bb[1][3])) / 10.0;
+	raw_temp1 = (bb[1][1] << 4) + ((bb[1][2] & 0xf0) >> 4);
+	if (raw_temp1 >= 0x800) raw_temp1 |= 0xf000;
+	raw_temp2 = ((bb[1][2] & 0x0f) << 8) + bb[1][3];
+	if (raw_temp2 >= 0x800) raw_temp2 |= 0xf000;
+	if (debug_output) {
+	  fprintf(stdout, "raw temp: %d %d\n", raw_temp1, raw_temp2);
+	}
+	temp1 = raw_temp1 / 10.0;
+	temp2 = raw_temp2 / 10.0;
 	flag = bb[1][4];
 	checksum = bb[1][5];
 
 	data = data_make("time", "", DATA_STRING, time_str,
 			 "model", "", DATA_STRING, "Maverick ET-7",
 			 "id", "Id", DATA_FORMAT, "\t %d", DATA_INT, init_code,
-			 "temperature_C", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp1,
-			 "temperature_2_C", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp2,
+			 "temperature_C_1", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp1,
+			 "temperature_C_2", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp2,
 			 NULL);
 	data_acquired_handler(data);
 	
@@ -61,9 +69,9 @@ r_device maverick_et_7 = {
 
   .name          = "Maverick ET-7",
   .modulation    = OOK_PULSE_PPM_RAW,
-  .short_limit   = 370*4,
+  .short_limit   = 380*4,
   .long_limit    = 510*4,
-  .reset_limit   = 1000*4,
+  .reset_limit   = 1100*4,
   .json_callback = &maverick_et_7_callback,
   .disabled      = 0,
   .demod_arg     = 0,

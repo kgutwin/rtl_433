@@ -230,18 +230,17 @@ void data_acquired_handler(data_t *data)
     }
     if (conversion_mode == CONVERT_CUSTOMARY) {
         for (data_t *d = data; d; d = d->next) {
-            if ((d->type == DATA_DOUBLE) &&
-                !strcmp(d->key, "temperature_C")) {
-                    *(double*)d->value = celsius2fahrenheit(*(double*)d->value);
-					free(d->key);
-                    d->key = strdup("temperature_F");
-                    char *pos;
-                    if (d->format &&
-                        (pos = strrchr(d->format, 'C'))) {
-                        *pos = 'F';
-                    }
-            }
-        }
+	  if (d->type != DATA_DOUBLE) continue;
+	  char* offs = strstr(d->key, "temperature_C");
+	  if (offs == NULL) continue;
+	  *(double*)d->value = celsius2fahrenheit(*(double*)d->value);
+	  *(offs + 12) = 'F';
+	  char *pos;
+	  if (d->format &&
+	      (pos = strrchr(d->format, 'C'))) {
+	    *pos = 'F';
+	  }
+	}
     }
 
     for (output_handler_t *output = output_handler; output; output = output->next) {
