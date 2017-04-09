@@ -22,38 +22,33 @@ static int maverick_et_7_callback(bitbuffer_t *bitbuffer) {
 	float temp1, temp2;
 
 
-	if (debug_output) {
-	  fprintf(stdout, "bits_per_row[1] = %d\n", bitbuffer->bits_per_row[1]);
-	  bitbuffer_print(bitbuffer);
-	}
-	for (i=1; i<10; i++){
-		if (bitbuffer->bits_per_row[i] != 6*8){
-			return 0;
+	for (i=0; i<10; i++){
+		if (bitbuffer->bits_per_row[i] == 6*8){
+		  init_code = bb[i][0];
+		  raw_temp1 = (bb[i][1] << 4) + ((bb[i][2] & 0xf0) >> 4);
+		  if (raw_temp1 >= 0x800) raw_temp1 |= 0xf000;
+		  raw_temp2 = ((bb[i][2] & 0x0f) << 8) + bb[i][3];
+		  if (raw_temp2 >= 0x800) raw_temp2 |= 0xf000;
+		  if (debug_output) {
+		    fprintf(stdout, "raw temp: %d %d\n", raw_temp1, raw_temp2);
+		  }
+		  temp1 = raw_temp1 / 10.0;
+		  temp2 = raw_temp2 / 10.0;
+		  flag = bb[i][4];
+		  checksum = bb[i][5];
+		  
+		  data = data_make("time", "", DATA_STRING, time_str,
+				   "model", "", DATA_STRING, "Maverick ET-7",
+				   "id", "Id", DATA_FORMAT, "\t %d", DATA_INT, init_code,
+				   "temperature_C_1", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp1,
+				   "temperature_C_2", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp2,
+				   NULL);
+		  data_acquired_handler(data);
+		  
+		  return 1; 
 		}
 	}
-
-	init_code = bb[1][0];
-	raw_temp1 = (bb[1][1] << 4) + ((bb[1][2] & 0xf0) >> 4);
-	if (raw_temp1 >= 0x800) raw_temp1 |= 0xf000;
-	raw_temp2 = ((bb[1][2] & 0x0f) << 8) + bb[1][3];
-	if (raw_temp2 >= 0x800) raw_temp2 |= 0xf000;
-	if (debug_output) {
-	  fprintf(stdout, "raw temp: %d %d\n", raw_temp1, raw_temp2);
-	}
-	temp1 = raw_temp1 / 10.0;
-	temp2 = raw_temp2 / 10.0;
-	flag = bb[1][4];
-	checksum = bb[1][5];
-
-	data = data_make("time", "", DATA_STRING, time_str,
-			 "model", "", DATA_STRING, "Maverick ET-7",
-			 "id", "Id", DATA_FORMAT, "\t %d", DATA_INT, init_code,
-			 "temperature_C_1", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp1,
-			 "temperature_C_2", "Temperature", DATA_FORMAT, "%.1f C", DATA_DOUBLE, temp2,
-			 NULL);
-	data_acquired_handler(data);
-	
-	return 1; 
+	return 0;
 }
 
 static char *output_fields[] = {
